@@ -1,5 +1,8 @@
+#! /usr/bin/env/python3
+
 from owonPDS import pds6062
 import sys
+from hexdump import hexdump
 
 
 def main() -> int:
@@ -9,7 +12,19 @@ def main() -> int:
         print("No device found")
         return -1
 
-    print("Scope found")
+    print("Device found")
+
+    data = scope._readMemory(32767)
+    if data is None:
+        print("Unable to read device")
+        return -2
+
+    print(f"Read {len(data)} bytes")
+    hexdump(data[0:256])
+
+    with open("out.bin", "wb") as binfile:
+        binfile.write(data)
+
     return 0
 
 
