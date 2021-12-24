@@ -25,10 +25,6 @@ def main() -> int:
     # with open("out.bin", "wb") as binfile:
     #     binfile.write(data)
 
-    cmd = ":DATa:WAVe:SCReen:HEAD?"
-    resp = scope.scpi_command(cmd)
-    print(f"{cmd} -> {resp}")
-
     cmd = ":DATa:WAVe:SCReen:CH1?"
     resp = scope.scpi_command(cmd)
     print(f"{cmd} -> {resp}")

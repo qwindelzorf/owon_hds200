@@ -47,30 +47,26 @@ class owonPDS(ABC):
         self.dev.clear_halt(self._WRITE_ENDPOINT)
 
         response: str = ""
-        block = usb.util.create_buffer(2048)
+        block = usb.util.create_buffer(16592)
         total_bytes = 0
 
         self.dev.clear_halt(self._READ_ENDPOINT)
 
         while True:
             try:
-                read_bytes = self.dev.read(self._READ_ENDPOINT, block, 10)
+                read_bytes = self.dev.read(self._READ_ENDPOINT, block, 100)
                 total_bytes += read_bytes
 
-                try:
-                    response += block.tobytes().decode("ascii")
-                except UnicodeDecodeError:
-                    print(f"{read_bytes} undecodable bytes:")
-                    hexdump(block[:read_bytes])
-                    print("\n")
-                    response += f"<{read_bytes} bytes>"
-                    pass
+                response += f"{read_bytes} bytes:\n"
+                response += hexdump(block[:read_bytes], "return")
+                response += "\n"
 
             except usb.core.USBTimeoutError:
                 break
         self.dev.clear_halt(self._READ_ENDPOINT)
 
-        return response.split("\0")[-1]
+        response += f"\n<{total_bytes} total bytes>"
+        return response
 
     def findDevice(self) -> bool:
         self.dev = usb.core.find(idVendor=self.__OWON_VENDOR_ID, idProduct=self.__OWON_SCOPE_PRODUCT_ID)
