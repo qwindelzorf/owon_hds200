@@ -45,6 +45,7 @@ def main() -> int:
             continue
 
         elif cmd_parts[0] == "exit" or cmd_parts[0] == "quit":
+            # breaking out of the loop is the "normal" exit path
             break
 
         elif cmd_parts[0] == "dump" or cmd_parts[0] == "save":

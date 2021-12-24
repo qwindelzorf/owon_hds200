@@ -49,7 +49,7 @@ class owonHDS:
         self.dev.clear_halt(self._WRITE_ENDPOINT)
 
         response: str = ""
-        block = usb.util.create_buffer(16592)
+        block = usb.util.create_buffer(16 * 1024)
         total_bytes = 0
 
         self.dev.clear_halt(self._READ_ENDPOINT)
@@ -64,12 +64,13 @@ class owonHDS:
                 response += "\n"
 
             except usb.core.USBTimeoutError:
+                # This is the expected exit path from the loop
                 break
             except usb.core.USBError as err:
-                if err.errno == 75:
+                if err.errno == 75:  # overflow
+                    response += f"<{read_bytes} bytes with overflow>\n"
                     continue
-                else:
-                    break
+                raise err  # re-throw
         self.dev.clear_halt(self._READ_ENDPOINT)
 
         response += f"\n<{total_bytes} total bytes>"
