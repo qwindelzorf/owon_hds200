@@ -2,4 +2,4 @@ __pycache__
 .mypy_cache
 *.pyc
 
-history.txt
+term_history.txt
