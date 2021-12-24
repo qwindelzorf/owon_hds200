@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+from array import array
 from typing import List, Optional
+from hexdump import hexdump
 
 import usb.core
 import usb.util
@@ -29,31 +31,46 @@ class owonPDS(ABC):
                 cfg = self.dev.get_active_configuration()
         return cfg
 
-    def _readMemory(self, numBytes: int) -> Optional[bytearray]:
-        if not self.connected():
-            return None
-
+    def scpi_command(self, cmd: str) -> str:
+        if not self.dev:
+            return ""
         cfg = self._configDevice()
-        if cfg is None:
-            return None
+        if not cfg:
+            return ""
 
-        data = bytearray()
+        self.dev.reset()
+        usb.util.claim_interface(self.dev, self.__DEFAULT_INTERFACE)
 
-        if self.dev and cfg:
-            self.dev.reset()
-            usb.util.claim_interface(self.dev, self.__DEFAULT_INTERFACE)
+        self.dev.clear_halt(self._WRITE_ENDPOINT)
+        if self.dev.write(self._WRITE_ENDPOINT, cmd) != len(cmd):
+            return ""
+        self.dev.clear_halt(self._WRITE_ENDPOINT)
 
-            start_cmd = "STARTBMP"
-            self.dev.clear_halt(self._WRITE_ENDPOINT)
-            if self.dev.write(self._WRITE_ENDPOINT, start_cmd) != len(start_cmd):
-                return None
+        response: str = ""
+        block = usb.util.create_buffer(2048)
+        total_bytes = 0
 
-            self.dev.clear_halt(self._READ_ENDPOINT)
-            data = self.dev.read(self._READ_ENDPOINT, numBytes)
-        else:
-            return None
+        self.dev.clear_halt(self._READ_ENDPOINT)
 
-        return data
+        while True:
+            try:
+                read_bytes = self.dev.read(self._READ_ENDPOINT, block, 10)
+                total_bytes += read_bytes
+
+                try:
+                    response += block.tobytes().decode("ascii")
+                except UnicodeDecodeError:
+                    print(f"{read_bytes} undecodable bytes:")
+                    hexdump(block[:read_bytes])
+                    print("\n")
+                    response += f"<{read_bytes} bytes>"
+                    pass
+
+            except usb.core.USBTimeoutError:
+                break
+        self.dev.clear_halt(self._READ_ENDPOINT)
+
+        return response.split("\0")[-1]
 
     def findDevice(self) -> bool:
         self.dev = usb.core.find(idVendor=self.__OWON_VENDOR_ID, idProduct=self.__OWON_SCOPE_PRODUCT_ID)

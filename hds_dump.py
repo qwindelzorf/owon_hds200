@@ -14,16 +14,24 @@ def main() -> int:
 
     print("Device found")
 
-    data = scope._readMemory(32767)
-    if data is None:
-        print("Unable to read device")
-        return -2
+    # data = scope._readMemory(32767)
+    # if data is None:
+    #     print("Unable to read device")
+    #     return -2
 
-    print(f"Read {len(data)} bytes")
-    hexdump(data[0:256])
+    # print(f"Read {len(data)} bytes")
+    # hexdump(data[0:256])
 
-    with open("out.bin", "wb") as binfile:
-        binfile.write(data)
+    # with open("out.bin", "wb") as binfile:
+    #     binfile.write(data)
+
+    cmd = ":DATa:WAVe:SCReen:HEAD?"
+    resp = scope.scpi_command(cmd)
+    print(f"{cmd} -> {resp}")
+
+    cmd = ":DATa:WAVe:SCReen:CH1?"
+    resp = scope.scpi_command(cmd)
+    print(f"{cmd} -> {resp}")
 
     return 0
 
