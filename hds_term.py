@@ -1,17 +1,145 @@
 #! /usr/bin/env/python3
 
-from prompt_toolkit.shortcuts.prompt import PromptSession
+from typing import Dict, Iterable, Optional
+
 from owonHDS import owonHDS
 import sys
 
-from prompt_toolkit import prompt
-from prompt_toolkit.history import FileHistory
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.completion import WordCompleter, NestedCompleter
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.shortcuts import input_dialog
+from prompt_toolkit.shortcuts.prompt import PromptSession
 from prompt_toolkit.styles import Style
+from prompt_toolkit.key_binding import KeyBindings
+
+from pygments.lexer import RegexLexer
+from pygments.token import Generic, Text
+
+
+class ScpiLexer(RegexLexer):
+    name = "SCPI"
+    aliases = ["scpi"]
+
+    tokens = {
+        "root": [
+            (r":.+", Generic.Inserted),
+            (r".*\n", Text),
+        ]
+    }
+
+
+from prompt_toolkit.completion import CompleteEvent, Completer, Completion
+from prompt_toolkit.document import Document
+from prompt_toolkit.completion.nested import NestedDict
+
+
+class ScpiCompleter(NestedCompleter):
+    """Exactly the same as NestedCompleter, but using ':' as the separator, rather than ' '"""
+
+    def __repr__(self) -> str:
+        return "ScpiCompleter(%r, ignore_case=%r)" % (self.options, self.ignore_case)
+
+    def get_completions(self, document: Document, complete_event: CompleteEvent) -> Iterable[Completion]:
+        separator = ":"
+
+        # Split document.
+        text = document.text_before_cursor.lstrip(separator)
+        stripped_len = len(document.text_before_cursor) - len(text)
+
+        # If there is a ":", check for the first term, and use a subcompleter.
+        if separator in text:
+            first_term = text.split(separator)[0]
+            completer = self.options.get(first_term)
+
+            # If we have a sub completer, use this for the completions.
+            if completer is not None:
+                remaining_text = text[len(first_term) :].lstrip(separator)
+                move_cursor = len(text) - len(remaining_text) + stripped_len
+
+                new_document = Document(
+                    remaining_text,
+                    cursor_position=document.cursor_position - move_cursor,
+                )
+
+                for c in completer.get_completions(new_document, complete_event):
+                    yield c
+
+        # No space in the input: behave exactly like `WordCompleter`.
+        else:
+            completer = WordCompleter(list(self.options.keys()), ignore_case=self.ignore_case)
+            for c in completer.get_completions(document, complete_event):
+                yield c
 
 
 def main() -> int:
+    prompt_style = Style.from_dict(
+        {
+            "caret": "#ff0066",  # the prompt indicator
+            "completion-menu.completion": "bg:#008888 #ffffff",
+            "completion-menu.completion.current": "bg:#00aaaa #000000",
+            "": "#00ff66",  # user input
+        }
+    )
+
+    cmd_completer = WordCompleter(["exit", "quit", "save", "dump"])
+    scpi_completer = ScpiCompleter.from_nested_dict(
+        {
+            "ACQuire": {"MODe", "DEPMem"},
+            "CHANnel": None,
+            "CH1": {"DISPlay", "COUPling", "PROBe", "SCALe", "OFFSet"},
+            "CH2": {"DISPlay", "COUPling", "PROBe", "SCALe", "OFFSet"},
+            "DATa": {
+                "WAVe": {
+                    "SCReen": {
+                        "CH": {"1", "2"},
+                        "HEAD": None,
+                    }
+                }
+            },
+            # "FUNCtion": None,
+            "HORizontal": {"SCALe", "OFFSet"},
+            "TRIGger": {
+                "STATus": None,
+                "SINGle": {
+                    "SOURce": None,
+                    "COUPling": None,
+                    "EDGe": {"LEVel"},
+                    "SLOPe": None,
+                    "SWEep": None,
+                },
+            },
+            "MEASurement": {
+                "DISPlay": None,
+                "CH1": {"MAX", "MIN", "PKPK", "VAMP", "AVERage", "PERiod", "FREQuency"},
+                "CH2": {"MAX", "MIN", "PKPK", "VAMP", "AVERage", "PERiod", "FREQuency"},
+            },
+        }
+    )
+
+    kb = KeyBindings()
+
+    @kb.add("tab")
+    def _(event):
+        "Initialize autocompletion, or select the next completion."
+        buff = event.app.current_buffer
+        if buff.complete_state:
+            buff.complete_next()
+        else:
+            buff.start_completion(select_first=False)
+
+    session: PromptSession = PromptSession(
+        style=prompt_style,
+        history=FileHistory("term_history.txt"),
+        auto_suggest=AutoSuggestFromHistory(),
+        complete_while_typing=True,
+        completer=scpi_completer,
+        lexer=PygmentsLexer(ScpiLexer),
+        complete_in_thread=True,
+        key_bindings=kb,
+    )
+
     scope = owonHDS()
     scope.find_device()
     if not scope.dev:
@@ -20,23 +148,13 @@ def main() -> int:
     else:
         print(f"Device found at port {scope.dev.port_number}:{scope.dev.address}\n\n")
 
-    prompt_style = Style.from_dict(
-        {
-            "caret": "#ff0066",  # the prompt indicator
-            "": "#00ff66",  # user input
-        }
-    )
-
     response = ""
     while True:
         try:
-            cmd = prompt(
-                message=[("class:caret", ">")],
-                style=prompt_style,
-                history=FileHistory("term_history.txt"),
-                auto_suggest=AutoSuggestFromHistory(),
-            )
-        except KeyboardInterrupt:
+            cmd = session.prompt([("class:caret", ">")])
+        except KeyboardInterrupt:  # ctrl+c
+            break
+        except EOFError:  # ctrl+d
             break
 
         cmd_parts = cmd.split()

@@ -50,7 +50,7 @@ class owonHDS:
 
         response: str = ""
         block = usb.util.create_buffer(16 * 1024)
-        total_bytes = 0
+        total_bytes: int = 0
 
         self.dev.clear_halt(self._READ_ENDPOINT)
 

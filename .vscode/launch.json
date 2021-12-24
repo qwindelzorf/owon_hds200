@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: hds_dump",
+            "name": "Python: hds_term",
             "type": "python",
             "request": "launch",
-            "program": "hds_dump.py",
+            "program": "hds_term.py",
             "console": "integratedTerminal",
         }
     ]
