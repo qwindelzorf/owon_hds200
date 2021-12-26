@@ -102,7 +102,6 @@ def main() -> int:
     scpi_completer = ScpiCompleter.from_nested_dict(
         {
             "ACQuire": {"MODe", "DEPMem"},
-            "CHANnel": None,
             "CH1": {"DISPlay", "COUPling", "PROBe", "SCALe", "OFFSet"},
             "CH2": {"DISPlay", "COUPling", "PROBe", "SCALe", "OFFSet"},
             "DATa": {
@@ -115,7 +114,6 @@ def main() -> int:
                     "DEPMEM": {"ALL"},  # undocumented - dump screen as bin
                 }
             },
-            # "FUNCtion": None,
             "HORizontal": {"SCALe", "OFFSet"},
             "TRIGger": {
                 "STATus": None,
@@ -131,6 +129,19 @@ def main() -> int:
                 "DISPlay": None,
                 "CH1": {"MAX", "MIN", "PKPK", "VAMP", "AVERage", "PERiod", "FREQuency"},
                 "CH2": {"MAX", "MIN", "PKPK", "VAMP", "AVERage", "PERiod", "FREQuency"},
+            },
+            "CHANnel": None,
+            "FUNCtion": {
+                "FREQuency",
+                "PERiod",
+                "AMPLitude",
+                "OFFset",
+                "HIGHt",
+                "LOW",
+                "SYMMetry",
+                "WIDTh",
+                "DTYCycle",
+                "LOAD",
             },
         }
     )
