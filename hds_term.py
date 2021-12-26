@@ -13,6 +13,7 @@ from prompt_toolkit.shortcuts import input_dialog
 from prompt_toolkit.shortcuts.prompt import PromptSession
 from prompt_toolkit.styles import Style
 from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.validation import Validator, ValidationError
 
 from pygments.lexer import RegexLexer
 from pygments.token import Generic, Text
@@ -73,6 +74,21 @@ class ScpiCompleter(NestedCompleter):
                 yield c
 
 
+class ScpiValidator(Validator):
+    """Validate that a message is a valid SCPI command
+
+    Only works on full commands, not "on the fly"
+    """
+
+    def validate(self, document: Document) -> None:
+        import re
+
+        text = document.text
+        m = re.search(r"(:\w+)+(\?| \w+)", text)
+        if not m:
+            raise ValidationError(message="Invalid SCPI command")
+
+
 def main() -> int:
     prompt_style = Style.from_dict(
         {
@@ -95,7 +111,9 @@ def main() -> int:
                     "SCReen": {
                         "CH": {"1", "2"},
                         "HEAD": None,
-                    }
+                        "BMP": None,  # undocumented - dump screen as bmp
+                    },
+                    "DEPMEM": {"ALL"},  # undocumented - dump screen as bin
                 }
             },
             # "FUNCtion": None,
@@ -138,6 +156,8 @@ def main() -> int:
         lexer=PygmentsLexer(ScpiLexer),
         complete_in_thread=True,
         key_bindings=kb,
+        validator=ScpiValidator(),
+        validate_while_typing=False,
     )
 
     scope = owonHDS()

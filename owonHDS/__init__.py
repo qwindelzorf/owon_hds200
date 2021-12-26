@@ -30,6 +30,7 @@ class owonHDS:
         return cfg
 
     def scpi_command(self, cmd: str) -> str:
+        cmd = cmd.upper()
         if not self.dev:
             return ""
         cfg = self._config_device()
@@ -55,6 +56,7 @@ class owonHDS:
         self.dev.clear_halt(self._READ_ENDPOINT)
 
         while True:
+            read_bytes = 0
             try:
                 read_bytes = self.dev.read(self._READ_ENDPOINT, block, 100)
                 total_bytes += read_bytes
