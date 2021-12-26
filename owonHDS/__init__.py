@@ -1,7 +1,16 @@
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
 
 import usb.core
 import usb.util
+
+
+@dataclass
+class deviceID:
+    manufacturer: str
+    model: str
+    serial: str
+    version: str
 
 
 class owonHDS:
@@ -27,6 +36,13 @@ class owonHDS:
                 self.dev.set_configuration(self.__DEFAULT_CONFIGURATION)
                 cfg = self.dev.get_active_configuration()
         return cfg
+
+    def find_device(self) -> bool:
+        self.dev = usb.core.find(idVendor=self.__OWON_VENDOR_ID, idProduct=self.__OWON_SCOPE_PRODUCT_ID)
+        if self.dev:
+            self.dev.reset()
+            return True
+        return False
 
     def scpi_command(self, cmd: str) -> bytes:
         if not cmd:
@@ -80,9 +96,15 @@ class owonHDS:
         trimmed_response = response[response.rfind(0) + 1 :]
         return trimmed_response
 
-    def find_device(self) -> bool:
-        self.dev = usb.core.find(idVendor=self.__OWON_VENDOR_ID, idProduct=self.__OWON_SCOPE_PRODUCT_ID)
-        if self.dev:
-            self.dev.reset()
-            return True
-        return False
+    def device_id(self) -> Optional[deviceID]:
+        data = self.scpi_command("*IDN?")
+        if not data:
+            return None
+
+        id = data.decode("ascii").rstrip().split(",")
+        if not id:
+            return None
+        if not len(id) == 4:
+            return None
+
+        return deviceID(manufacturer=id[0], model=id[1], serial=id[2], version=id[3])

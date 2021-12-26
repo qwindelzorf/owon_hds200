@@ -83,7 +83,7 @@ class ScpiValidator(Validator):
         import re
 
         text = document.text
-        m = re.search(r"(:\w+)+(\?| \w+)", text)
+        m = re.search(r"([:\*]\w+)+(\?| \w+)", text)
         if not m:
             raise ValidationError(cursor_position=len(text), message="Invalid SCPI command")
 
@@ -165,7 +165,12 @@ def main() -> int:
         print("No device found")
         return -1
     else:
-        print(f"Device found at port {scope.dev.port_number}:{scope.dev.address}\n\n")
+        id = scope.device_id()
+        if id:
+            print(f"Device {id.manufacturer} {id.model} found at port {scope.dev.port_number}:{scope.dev.address}\n\n")
+        else:
+            print("Device founc, but could not identify.")
+            return -2
 
     response: bytes = b""
     while True:
