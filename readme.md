@@ -4,7 +4,7 @@ the Owon HDS200 series handheld oscilloscopes (HDS242, HDS272, maybe others) com
 
 ## hds_term.py
 
-A simple command-line REPL style terminal interface to the scope. The scope command set is a subset of the IEEE488.2 SCPI interface. The tool provides some basic autocomplete to help with exploring the SCPI command space. There's also a very basic command validator to prevent sending invalid commands to the scope, which usually causes the scope firmware to crash.
+A simple command-line REPL style terminal interface to the scope. The scope command set is a subset of the IEEE488.2 SCPI interface. The tool provides some basic autocomplete to help with exploring the SCPI command space. There's also a very basic command validator to prevent sending invalid commands to the scope, which usually causes the scope firmware to crash. It's not guaranteed though -- anything that looks like a SCPI command will be sent, and if the scope doesn't support that comand, it will most likely crash.
 
 It also has a few direct control commands:
 
