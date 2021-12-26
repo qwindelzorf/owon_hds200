@@ -15,6 +15,9 @@ from prompt_toolkit.shortcuts.prompt import PromptSession
 from prompt_toolkit.styles import Style
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.validation import Validator, ValidationError
+from prompt_toolkit.completion import CompleteEvent, Completer, Completion
+from prompt_toolkit.document import Document
+from prompt_toolkit.completion.nested import NestedDict
 
 from pygments.lexer import RegexLexer
 from pygments.token import Generic, Text
@@ -30,11 +33,6 @@ class ScpiLexer(RegexLexer):
             (r".*\n", Text),
         ]
     }
-
-
-from prompt_toolkit.completion import CompleteEvent, Completer, Completion
-from prompt_toolkit.document import Document
-from prompt_toolkit.completion.nested import NestedDict
 
 
 class ScpiCompleter(NestedCompleter):
@@ -87,7 +85,7 @@ class ScpiValidator(Validator):
         text = document.text
         m = re.search(r"(:\w+)+(\?| \w+)", text)
         if not m:
-            raise ValidationError(message="Invalid SCPI command")
+            raise ValidationError(cursor_position=len(text), message="Invalid SCPI command")
 
 
 def main() -> int:
@@ -157,8 +155,8 @@ def main() -> int:
         lexer=PygmentsLexer(ScpiLexer),
         complete_in_thread=True,
         key_bindings=kb,
-        validator=ScpiValidator(),
-        validate_while_typing=False,
+        # validator=ScpiValidator(),
+        # validate_while_typing=False,
     )
 
     scope = owonHDS()
@@ -169,7 +167,7 @@ def main() -> int:
     else:
         print(f"Device found at port {scope.dev.port_number}:{scope.dev.address}\n\n")
 
-    response = ""
+    response: bytes = b""
     while True:
         try:
             cmd = session.prompt([("class:caret", ">")])
@@ -178,8 +176,10 @@ def main() -> int:
         except EOFError:  # ctrl+d
             break
 
-        cmd_parts = cmd.split()
+        if not cmd:
+            continue
 
+        cmd_parts = cmd.split()
         if not cmd_parts[0]:
             continue
 
@@ -199,7 +199,7 @@ def main() -> int:
                 continue
 
             try:
-                with open(filename, "w") as out_file:
+                with open(filename, "wb") as out_file:
                     out_file.write(response)
             except OSError as err:
                 print(f"Invalid path: {err.strerror}")
@@ -211,10 +211,14 @@ def main() -> int:
             pass
 
         else:
-            response = scope.scpi_command(cmd)
-            out = hexdump(response, "return")
-            out += f"\n<{len(response)} bytes>\n"
-            print(f"{out}\n")
+            try:
+                ScpiValidator().validate(Document(cmd))
+                response = scope.scpi_command(cmd)
+                out = hexdump(response, "return")
+                out += f"\n<{len(response)} bytes>"
+                print(f"{out}")
+            except ValidationError:
+                print(f'Invalid command. Not SCPI or keyword. type "help" for valid commands.')
 
     return 0
 
