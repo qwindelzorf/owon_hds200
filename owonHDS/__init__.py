@@ -1,5 +1,4 @@
 from typing import List, Optional
-from hexdump import hexdump
 
 import usb.core
 import usb.util
@@ -29,7 +28,7 @@ class owonHDS:
                 cfg = self.dev.get_active_configuration()
         return cfg
 
-    def scpi_command(self, cmd: str) -> str:
+    def scpi_command(self, cmd: str) -> bytes:
         cmd = cmd.upper()
         if not self.dev:
             return ""
@@ -49,34 +48,27 @@ class owonHDS:
             return ""
         self.dev.clear_halt(self._WRITE_ENDPOINT)
 
-        response: str = ""
         block = usb.util.create_buffer(16 * 1024)
+        response: bytes = b""
         total_bytes: int = 0
-
-        self.dev.clear_halt(self._READ_ENDPOINT)
 
         while True:
             read_bytes = 0
             try:
                 read_bytes = self.dev.read(self._READ_ENDPOINT, block, 100)
                 total_bytes += read_bytes
-
-                response += f"<{read_bytes} bytes>\n"
-                response += hexdump(block[:read_bytes], "return")
-                response += "\n"
+                response += block.tobytes()[0:read_bytes]
 
             except usb.core.USBTimeoutError:
                 # This is the expected exit path from the loop
                 break
             except usb.core.USBError as err:
                 if err.errno == 75:  # overflow
-                    response += f"<{read_bytes} bytes with overflow>\n"
                     continue
                 raise err  # re-throw
         self.dev.clear_halt(self._READ_ENDPOINT)
 
-        response += f"\n<{total_bytes} total bytes>"
-        return response
+        return response[response.rfind(0) + 1 :]
 
     def find_device(self) -> bool:
         self.dev = usb.core.find(idVendor=self.__OWON_VENDOR_ID, idProduct=self.__OWON_SCOPE_PRODUCT_ID)

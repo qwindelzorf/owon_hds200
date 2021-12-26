@@ -1,8 +1,9 @@
 #! /usr/bin/env/python3
 
-from typing import Dict, Iterable, Optional
+from typing import Dict, Iterable
 
 from owonHDS import owonHDS
+from hexdump import hexdump
 import sys
 
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -211,7 +212,9 @@ def main() -> int:
 
         else:
             response = scope.scpi_command(cmd)
-            print(f"{response}\n")
+            out = hexdump(response, "return")
+            out += f"\n<{len(response)} bytes>\n"
+            print(f"{out}\n")
 
     return 0
 
