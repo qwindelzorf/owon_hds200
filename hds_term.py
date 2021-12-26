@@ -212,7 +212,10 @@ def main() -> int:
             print(f"Last response saved to {filename}")
 
         elif cmd_parts[0] == "help":
-            print("TODO: Help message goes here")
+            print("- help:   Show this help message")
+            print("- save:   Save the most recent response from the scope to a file.")
+            print("- exit:   Quit the program")
+            print("- ctrl+c: Quit the program")
             pass
 
         else:
