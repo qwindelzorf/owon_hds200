@@ -2,7 +2,7 @@
 
 from owonHDS import owonHDS
 import sys
-from hexdump import hexdump
+import json
 
 
 def main() -> int:
@@ -12,11 +12,21 @@ def main() -> int:
         print("No device found")
         return -1
 
-    cmd = ":DATa:WAVe:SCReen:CH1?"
-    resp = scope.scpi_command(cmd)
+    cmd = ":DATa:WAVe:SCReen:HEAD?"
+    head = json.loads(scope.scpi_command(cmd).decode("utf-8"))
 
-    # with open("out.bin", "wb") as binfile:
-    #     binfile.write(data)
+    for channel in head["CHANNEL"]:
+        channel_name = channel["NAME"]
+        channel_enabled = channel["DISPLAY"] == "ON"
+        if channel_enabled:
+            cmd = f":DATa:WAVe:SCReen:{channel_name}?"
+            channel_data = scope.scpi_command(cmd)
+
+            with open(f"out_{channel_name}.bin", "wb") as binfile:
+                binfile.write(channel_data)
+            with open(f"out_{channel_name}.csv", "w") as csvfile:
+                for sample in channel_data:
+                    csvfile.write(f"{sample}\n")
 
     return 0
 
