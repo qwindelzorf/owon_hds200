@@ -29,24 +29,33 @@ class owonHDS:
         return cfg
 
     def scpi_command(self, cmd: str) -> bytes:
+        if not cmd:
+            return b""
+
         cmd = cmd.upper()
+        response_expected: bool = cmd.rstrip().endswith("?")
+
+        # Reference java app has termination, but it doesn't seem to be necessary.
+        # termination = "\r\n"
+        # if not cmd.endswith(termination):
+        #     cmd += termination
+
         if not self.dev:
-            return ""
+            return b""
         cfg = self._config_device()
         if not cfg:
-            return ""
-
-        termination = "\r\n"
-        if not cmd.endswith(termination):
-            cmd += termination
+            return b""
 
         self.dev.reset()
         usb.util.claim_interface(self.dev, self.__DEFAULT_INTERFACE)
 
         self.dev.clear_halt(self._WRITE_ENDPOINT)
         if self.dev.write(self._WRITE_ENDPOINT, cmd) != len(cmd):
-            return ""
+            return b""
         self.dev.clear_halt(self._WRITE_ENDPOINT)
+
+        if not response_expected:
+            return b""
 
         block = usb.util.create_buffer(16 * 1024)
         response: bytes = b""
@@ -68,7 +77,8 @@ class owonHDS:
                 raise err  # re-throw
         self.dev.clear_halt(self._READ_ENDPOINT)
 
-        return response[response.rfind(0) + 1 :]
+        trimmed_response = response[response.rfind(0) + 1 :]
+        return trimmed_response
 
     def find_device(self) -> bool:
         self.dev = usb.core.find(idVendor=self.__OWON_VENDOR_ID, idProduct=self.__OWON_SCOPE_PRODUCT_ID)
