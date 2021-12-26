@@ -29,7 +29,7 @@ class ScpiLexer(RegexLexer):
 
     tokens = {
         "root": [
-            (r":.+", Generic.Inserted),
+            (r":[^: ?]+", Generic.Inserted),
             (r".*\n", Text),
         ]
     }
