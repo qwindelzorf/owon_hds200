@@ -1,0 +1,4 @@
+pyusb
+hexdump
+prompt_toolkit
+pygments
