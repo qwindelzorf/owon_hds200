@@ -1,5 +1,7 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
+from types import SimpleNamespace
 from dataclasses import dataclass
+import json
 
 import usb.core
 import usb.util
@@ -108,3 +110,27 @@ class owonHDS:
             return None
 
         return deviceID(manufacturer=id[0], model=id[1], serial=id[2], version=id[3])
+
+    def get_screen_info(self):
+        cmd = ":DATa:WAVe:SCReen:HEAD?"
+        json_string = self.scpi_command(cmd).decode("utf-8")
+        info = json.loads(json_string, object_hook=lambda d: SimpleNamespace(**d))
+        return info
+
+    def enabled_channels(self) -> Set[str]:
+        enabled_channels: Set[str] = set()
+
+        info = self.get_screen_info()
+
+        for channel in info.CHANNEL:
+            channel_name = channel.NAME
+            channel_enabled = channel.DISPLAY == "ON"
+            if channel_enabled:
+                enabled_channels.add(channel_name)
+
+        return enabled_channels
+
+    def get_data(self, channel_name: str) -> bytes:
+        cmd = f":DATa:WAVe:SCReen:{channel_name}?"
+        channel_data = self.scpi_command(cmd)
+        return channel_data
