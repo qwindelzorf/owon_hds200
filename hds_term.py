@@ -180,7 +180,7 @@ def main() -> int:
         if id:
             print(f"Device {id.manufacturer} {id.model} found at port {scope.dev.port_number}:{scope.dev.address}\n\n")
         else:
-            print("Device founc, but could not identify.")
+            print("Device found, but could not identify.")
             return -2
 
     response: bytes = b""
@@ -233,9 +233,10 @@ def main() -> int:
             try:
                 ScpiValidator().validate(Document(cmd))
                 response = scope.scpi_command(cmd)
-                out = hexdump(response, "return")
-                out += f"\n<{len(response)} bytes>"
-                print(f"{out}")
+                if response:
+                    out = hexdump(response, "return")
+                    out += f"\n<{len(response)} bytes>"
+                    print(f"{out}")
             except ValidationError:
                 print(f'Invalid command. Not SCPI or keyword. type "help" for valid commands.')
 
