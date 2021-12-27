@@ -2,3 +2,5 @@ pyusb
 hexdump
 prompt_toolkit
 pygments
+pyqt5-dev-tools
+pyqtgraph

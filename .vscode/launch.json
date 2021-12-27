@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: hds_term",
+            "name": "Python: hds_stream",
             "type": "python",
             "request": "launch",
-            "program": "hds_term.py",
+            "program": "hds_stream.py",
             "console": "integratedTerminal",
         }
     ]
